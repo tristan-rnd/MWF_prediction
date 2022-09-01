@@ -41,7 +41,7 @@ def loss(train_loss, validation_loss, epochs):
     plt.savefig('Loss.pdf')
 
 
-def prediction(net, loader, device="cuda", nb=6):
+def prediction(net, loader, device="cuda", nb=8):
     T1_T2, MWF = next(iter(loader))
     fig_trained, ax_trained = plt.subplots(nb, 4, figsize=(10, 15))
     fig_trained.suptitle("MWF created from T1 & T2")
@@ -67,5 +67,6 @@ def prediction(net, loader, device="cuda", nb=6):
         ax_trained[i][3].imshow(output, cmap="gray")
         ax_trained[i][3].set_title("Predicted MWF")
     plt.savefig('Prediction.pdf')
+    plt.show()
 
     return output

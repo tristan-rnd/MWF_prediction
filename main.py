@@ -14,6 +14,8 @@ import torchvision.transforms as transforms
 from skimage import io
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
+import skimage
+from skimage.metrics import structural_similarity
 
 if torch.cuda.is_available():
     device = "cuda"
@@ -291,8 +293,8 @@ t = time.time()
 train_loss, validation_loss = train(net, device, train_loader_norm, validation_loader_norm, epochs, lr)
 print("Temps d'apprentissage : ", int(time.time() - t) // 60)
 
-# -------------------------------
 
+# -------------------------------
 
 
 def loss(train_loss, validation_loss, epochs):
@@ -307,11 +309,14 @@ def loss(train_loss, validation_loss, epochs):
                 verticalalignment='center', transform=ax_acc.transAxes)
     plt.savefig('Loss.pdf')
 
+
 loss(train_loss, validation_loss, epochs)
 # -------------------------------
 
 
 torch.save(net.state_dict(), "MWF_pred")
+
+# -- Prediction displaying --
 
 net.load_state_dict(torch.load('MWF_pred'))
 net.eval()
@@ -319,83 +324,44 @@ net.eval()
 
 # -------------------------------
 
-def prediction(net, loader, device="cuda", nb=8):
-    T1_T2, MWF = next(iter(loader))
-    fig_trained, ax_trained = plt.subplots(nb, 4, figsize=(10, 15))
-    fig_trained.suptitle("MWF created from T1 & T2")
-
-    fig_trained.tight_layout()
-    fig_trained.subplots_adjust(top=0.92)
-
-    for i in range(nb):
-        if device == "cuda":
-            output = net(T1_T2[i].to(device).type(torch.cuda.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach()
-        else:
-            output = net(T1_T2[i].to(device).float().unsqueeze(dim=0)).item()
-
-        ax_trained[i][0].imshow(T1_T2[i][0], cmap="gray")
-        ax_trained[i][0].set_title("T1")
-
-        ax_trained[i][1].imshow(T1_T2[i][1], cmap="gray")
-        ax_trained[i][1].set_title("T2")
-
-        ax_trained[i][2].imshow(MWF[i][0], cmap="gray")
-        ax_trained[i][2].set_title("True MWF")
-
-        ax_trained[i][3].imshow(output, cmap="gray")
-        ax_trained[i][3].set_title("Predicted MWF")
-    plt.savefig('Prediction.pdf')
-
-    return output
-
-Prediction = prediction(net, test_loader_norm, device)
-plt.imshow(Prediction)
-plt.show()
-
-# -------------------------------
-
-
-import skimage
-from skimage.metrics import structural_similarity
+Prediction = display.prediction(net, test_loader_norm, device)
 
 # -------------------------------
 
 T1_T2, MWF = next(iter(test_loader_norm))
 fig, axs = plt.subplots(1, 2)
+fig.tight_layout()
+fig.subplots_adjust(top=0.92)
 axs[0].imshow(MWF[5][0], cmap="gray")
-axs[1].imshow(net(T1_T2[5].to(device).type(torch.cuda.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach(), cmap="gray")
-plt.savefig('VS.pdf')
+axs[1].imshow(net(T1_T2[5].to(device).type(torch.cuda.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach(),
+              cmap="gray")
+plt.savefig('True vs Predicted.pdf')
+fig.suptitle("True vs Predicted")
 plt.show()
+output = net(T1_T2[5].to(device).type(torch.cuda.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach().numpy()
+target = MWF[5][0].numpy()
+io.imsave("MWF_Prediction.tiff", output)
+io.imsave("MWF_true.tiff", target.astype(np.float32))
 
 # -------------------------------
 
-
-
-def comparison(truth, pred):
-    comp = np.zeros(np.shape(truth), dtype=np.float64)
-    index, ss = skimage.metrics.structural_similarity(truth, pred, data_range=pred.max() - pred.min(), gradient=True)
-
-    return comp, ss, index
-
-
-# -------------------------------
 moyenne = 0
 t = 0
-for j in range(25):
+for j in range(10):
     T1_T2, MWF = next(iter(test_loader_norm))
     for i in range(len(test_loader_norm)):
-        comp, ss, index = comparison(MWF[i][0].numpy(), net(T1_T2[i].to(device).type(torch.cuda.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach().numpy())
+        pred = net(T1_T2[i].to(device).type(torch.cuda.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach().numpy()
+        target = MWF[i][0].numpy()
+        index, SSIM = skimage.metrics.structural_similarity(target, pred, data_range=pred.max() - pred.min(),
+                                                            gradient=True)
         if index > 0.25:
             moyenne = moyenne + index
             t = t + 1
-print(moyenne/t)
+print(moyenne / t)
 
 # -------------------------------
-
-plt.imshow(ss, cmap="gray")
+plt.figure()
+plt.title("Similarities")
+ax = plt.imshow(SSIM)
 plt.show()
 plt.savefig('Similarities.pdf')
-# -------------------------------
-
-
-# -------------------------------
