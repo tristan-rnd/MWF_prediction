@@ -36,7 +36,7 @@ def loss(train_loss, validation_loss, epochs):
     ax_acc.set_xlabel("Epochs")
     ax_acc.set_ylabel("Loss")
     ax_acc.legend()
-    ax_acc.text(0.8, 0.2, "Final loss: " + "{:.2f}".format(validation_loss[-1]), horizontalalignment='center',
+    ax_acc.text(0.8, 0.2, "Final loss: " + "{:.10f}".format(validation_loss[-1]), horizontalalignment='center',
                 verticalalignment='center', transform=ax_acc.transAxes)
     plt.savefig('Loss.pdf')
 
@@ -51,7 +51,7 @@ def prediction(net, loader, device="cuda", nb=6):
 
     for i in range(nb):
         if device == "cuda":
-            output = net(T1_T2[i].to(device).type(torch.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach()
+            output = net(T1_T2[i].to(device).type(torch.cuda.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach()
         else:
             output = net(T1_T2[i].to(device).float().unsqueeze(dim=0)).item()
 

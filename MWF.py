@@ -1,5 +1,3 @@
-from torch import Tensor
-
 import display
 
 import pandas as pd
@@ -22,7 +20,7 @@ if torch.cuda.is_available():
 else:
     device = "cpu"
 
-batch = 50
+batch = 30
 
 T1_T2_match = pd.read_csv("index.csv")
 train_match, test_match = train_test_split(T1_T2_match, test_size=0.1, random_state=25)
@@ -94,7 +92,6 @@ print(torch.max(MWF[0][0]).item())
 
 
 display.samples(train_loader, norm=0)
-
 
 # -------------------------------
 
@@ -203,8 +200,8 @@ def train(model, device, train_loader, validation_loader, epochs, lr=0.001):
             for data, target in tepoch:
 
                 if device == "cuda":
-                    data, target = data.to(device).type(torch.FloatTensor), target.to(device).to(device).type(
-                        torch.FloatTensor)
+                    data, target = data.to(device).type(torch.cuda.FloatTensor), target.to(device).to(device).type(
+                        torch.cuda.FloatTensor)
                 else:
                     data, target = data.to(device).float(), target.to(device).float()
 
@@ -228,8 +225,8 @@ def train(model, device, train_loader, validation_loader, epochs, lr=0.001):
             for data, target in validation_loader:
 
                 if device == "cuda":
-                    data, target = data.to(device).type(torch.FloatTensor), target.to(device).to(device).type(
-                        torch.FloatTensor)
+                    data, target = data.to(device).type(torch.cuda.FloatTensor), target.to(device).to(device).type(
+                        torch.cuda.FloatTensor)
                 else:
                     data, target = data.to(device).float(), target.to(device).float()
 
@@ -253,19 +250,19 @@ class MWF_pred_net(nn.Module):
     def __init__(self):
         super(MWF_pred_net, self).__init__()
 
-        self.conv1 = nn.Conv2d(2, 64, 3, padding=2)
+        self.conv1 = nn.Conv2d(2, 64, 5, padding=2)
         self.norm1 = nn.BatchNorm2d(64)
-        self.conv2 = nn.Conv2d(64, 64, 3, padding=2)
-        self.norm2 = nn.BatchNorm2d(64)
-        self.conv3 = nn.Conv2d(64, 128, 3, padding=2)
+        self.conv2 = nn.Conv2d(64, 128, 5, padding=2)
+        self.norm2 = nn.BatchNorm2d(128)
+        self.conv3 = nn.Conv2d(128, 128, 5, padding=2)
         self.norm3 = nn.BatchNorm2d(128)
         self.conv4 = nn.Conv2d(128, 128, 3, padding=2)
         self.norm4 = nn.BatchNorm2d(128)
-        self.conv5 = nn.Conv2d(128, 128, 3)
+        self.conv5 = nn.Conv2d(128, 128, 3, padding=2)
         self.norm5 = nn.BatchNorm2d(128)
-        self.conv6 = nn.Conv2d(128, 64, 3)
-        self.norm6 = nn.BatchNorm2d(64)
-        self.conv7 = nn.Conv2d(64, 64, 3)
+        self.conv6 = nn.Conv2d(128, 128, 5, padding=2)
+        self.norm6 = nn.BatchNorm2d(128)
+        self.conv7 = nn.Conv2d(128, 64, 3)
         self.norm7 = nn.BatchNorm2d(64)
 
         self.conv8 = nn.Conv2d(64, 1, 3)
@@ -284,8 +281,8 @@ class MWF_pred_net(nn.Module):
         return x
 
 
-epochs = 20
-lr = 0.1
+epochs = 15
+lr = 0.0005
 
 net = MWF_pred_net().to(device)
 
@@ -297,24 +294,63 @@ print("Temps d'apprentissage : ", int(time.time() - t) // 60)
 # -------------------------------
 
 
-display.loss(train_loss, validation_loss, epochs)
 
+def loss(train_loss, validation_loss, epochs):
+    fig_acc, ax_acc = plt.subplots()
+    ax_acc.plot(range(0, epochs), train_loss, label="Train data")
+    ax_acc.plot(range(0, epochs), validation_loss, label="validation data")
+    ax_acc.set_title("Loss over epochs")
+    ax_acc.set_xlabel("Epochs")
+    ax_acc.set_ylabel("Loss")
+    ax_acc.legend()
+    ax_acc.text(0.8, 0.2, "Final loss: " + "{:.10f}".format(validation_loss[-1]), horizontalalignment='center',
+                verticalalignment='center', transform=ax_acc.transAxes)
+    plt.savefig('Loss.pdf')
 
+loss(train_loss, validation_loss, epochs)
 # -------------------------------
 
 
-torch.save(net.state_dict(), "MWF_pred.zip")
+torch.save(net.state_dict(), "MWF_pred")
 
-net.load_state_dict(torch.load('T1toT2netSEG'))
+net.load_state_dict(torch.load('MWF_pred'))
 net.eval()
 
 
 # -------------------------------
 
+def prediction(net, loader, device="cuda", nb=8):
+    T1_T2, MWF = next(iter(loader))
+    fig_trained, ax_trained = plt.subplots(nb, 4, figsize=(10, 15))
+    fig_trained.suptitle("MWF created from T1 & T2")
 
-Prediction = display.prediction(T1_T2, MWF, net, device)
+    fig_trained.tight_layout()
+    fig_trained.subplots_adjust(top=0.92)
+
+    for i in range(nb):
+        if device == "cuda":
+            output = net(T1_T2[i].to(device).type(torch.cuda.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach()
+        else:
+            output = net(T1_T2[i].to(device).float().unsqueeze(dim=0)).item()
+
+        ax_trained[i][0].imshow(T1_T2[i][0], cmap="gray")
+        ax_trained[i][0].set_title("T1")
+
+        ax_trained[i][1].imshow(T1_T2[i][1], cmap="gray")
+        ax_trained[i][1].set_title("T2")
+
+        ax_trained[i][2].imshow(MWF[i][0], cmap="gray")
+        ax_trained[i][2].set_title("True MWF")
+
+        ax_trained[i][3].imshow(output, cmap="gray")
+        ax_trained[i][3].set_title("Predicted MWF")
+    plt.savefig('Prediction.pdf')
+
+    return output
+
+Prediction = prediction(net, test_loader_norm, device)
 plt.imshow(Prediction)
-
+plt.show()
 
 # -------------------------------
 
@@ -324,52 +360,42 @@ from skimage.metrics import structural_similarity
 
 # -------------------------------
 
-
-unnorm = transforms.Normalize((-T1_T2_test_mean / T1_T2_test_std), (1 / T1_T2_test_std))
 T1_T2, MWF = next(iter(test_loader_norm))
-pred = net(MWF.to(device).type(torch.FloatTensor))
-pred = pred[1:257, 1:257]
-
-# -------------------------------
-
-
 fig, axs = plt.subplots(1, 2)
-axs[0].imshow((MWF[20])[0], cmap="gray")
-axs[1].imshow(pred[20].cpu().detach()[0], cmap="gray")
-
+axs[0].imshow(MWF[5][0], cmap="gray")
+axs[1].imshow(net(T1_T2[5].to(device).type(torch.cuda.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach(), cmap="gray")
+plt.savefig('VS.pdf')
+plt.show()
 
 # -------------------------------
 
-truth = unnorm(MWF[10])[0].numpy()
-prediction = unnorm(pred[10].cpu().detach())[0].numpy()
-
-test = prediction[35:220, 75:220]
-test2 = truth[35:220, 75:220]
-plt.imshow(test)
 
 
 def comparison(truth, pred):
-    print(truth.shape)
-    print(pred.shape)
     comp = np.zeros(np.shape(truth), dtype=np.float64)
-    for i in range(0, np.shape(truth)[0]):
-        for j in range(0, truth.shape[1]):
-            comp[i][j] = ((pred[i][j] - truth[i][j]) / truth[i][j]) * 100
     index, ss = skimage.metrics.structural_similarity(truth, pred, data_range=pred.max() - pred.min(), gradient=True)
 
     return comp, ss, index
 
 
 # -------------------------------
-
-comp, ss, index = comparison(test2, test)
+moyenne = 0
+t = 0
+for j in range(25):
+    T1_T2, MWF = next(iter(test_loader_norm))
+    for i in range(len(test_loader_norm)):
+        comp, ss, index = comparison(MWF[i][0].numpy(), net(T1_T2[i].to(device).type(torch.cuda.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach().numpy())
+        if index > 0.25:
+            moyenne = moyenne + index
+            t = t + 1
+print(moyenne/t)
 
 # -------------------------------
 
 plt.imshow(ss, cmap="gray")
-
+plt.show()
+plt.savefig('Similarities.pdf')
 # -------------------------------
 
-print(index)
 
 # -------------------------------
