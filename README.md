@@ -9,4 +9,8 @@ The shell scripts allow to preprocess the images to standardise their size, orie
 This library describe several functions for displaying samples from the data loaders but also the training loss or examples of the CNN output.
 
 ## main.py
-This contains the main data loaders and the training function to make the CNN learning. 
+This contains the main data loaders and the training function to make the CNN learning.
+It allows to train the CNN as long as save it and display some results.
+
+## Prediction_only.py
+This file only allows to import a CNN with the same structure. You can then display your results.
