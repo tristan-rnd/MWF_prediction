@@ -3,6 +3,10 @@
 *.nii
 *.nii.gz
 *.zip
+T1/*.tiff
+T2/*.tiff
+TMWF/*.tiff
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
