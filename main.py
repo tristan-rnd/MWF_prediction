@@ -296,21 +296,8 @@ print("Temps d'apprentissage : ", int(time.time() - t) // 60)
 
 # -------------------------------
 
+display.loss(train_loss, validation_loss, epochs)
 
-def loss(train_loss, validation_loss, epochs):
-    fig_acc, ax_acc = plt.subplots()
-    ax_acc.plot(range(0, epochs), train_loss, label="Train data")
-    ax_acc.plot(range(0, epochs), validation_loss, label="validation data")
-    ax_acc.set_title("Loss over epochs")
-    ax_acc.set_xlabel("Epochs")
-    ax_acc.set_ylabel("Loss")
-    ax_acc.legend()
-    ax_acc.text(0.8, 0.2, "Final loss: " + "{:.10f}".format(validation_loss[-1]), horizontalalignment='center',
-                verticalalignment='center', transform=ax_acc.transAxes)
-    plt.savefig('Loss.pdf')
-
-
-loss(train_loss, validation_loss, epochs)
 # -------------------------------
 
 
@@ -335,13 +322,13 @@ fig.subplots_adjust(top=0.92)
 axs[0].imshow(MWF[5][0], cmap="gray")
 axs[1].imshow(net(T1_T2[5].to(device).type(torch.cuda.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach(),
               cmap="gray")
-plt.savefig('True vs Predicted.pdf')
+plt.savefig('Results/True vs Predicted.pdf')
 fig.suptitle("True vs Predicted")
 plt.show()
 output = net(T1_T2[5].to(device).type(torch.cuda.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach().numpy()
 target = MWF[5][0].numpy()
-io.imsave("MWF_Prediction.tiff", output)
-io.imsave("MWF_true.tiff", target.astype(np.float32))
+io.imsave("Results/MWF_Prediction.tiff", output)
+io.imsave("Results/MWF_true.tiff", target.astype(np.float32))
 
 # -------------------------------
 
@@ -364,4 +351,4 @@ plt.figure()
 plt.title("Similarities")
 ax = plt.imshow(SSIM)
 plt.show()
-plt.savefig('Similarities.pdf')
+plt.savefig('Results/Similarities.pdf')

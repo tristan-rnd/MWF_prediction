@@ -22,9 +22,9 @@ def samples(loader, norm):
     ax_trained[2].imshow(MWF[0][0], cmap="gray")
     ax_trained[2].set_title("MWF")
     if norm == 0:
-        plt.savefig('Samples_display.pdf')
+        plt.savefig('Results/Samples_display.pdf')
     else:
-        plt.savefig('Normalized_samples_display.pdf')
+        plt.savefig('Results/Normalized_samples_display.pdf')
     return
 
 
@@ -38,7 +38,7 @@ def loss(train_loss, validation_loss, epochs):
     ax_acc.legend()
     ax_acc.text(0.8, 0.2, "Final loss: " + "{:.10f}".format(validation_loss[-1]), horizontalalignment='center',
                 verticalalignment='center', transform=ax_acc.transAxes)
-    plt.savefig('Loss.pdf')
+    plt.savefig('Results/Loss.pdf')
 
 
 def prediction(net, loader, device="cuda", nb=8):
@@ -66,7 +66,7 @@ def prediction(net, loader, device="cuda", nb=8):
 
         ax_trained[i][3].imshow(output, cmap="gray")
         ax_trained[i][3].set_title("Predicted MWF")
-    plt.savefig('Prediction.pdf')
+    plt.savefig('Results/Prediction.pdf')
     plt.show()
 
     return output

@@ -160,13 +160,13 @@ fig.subplots_adjust(top=0.92)
 axs[0].imshow(MWF[5][0], cmap="gray")
 axs[1].imshow(net(T1_T2[5].to(device).type(torch.cuda.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach(),
               cmap="gray")
-plt.savefig('True vs Predicted.pdf')
+plt.savefig('Results/True vs Predicted.pdf')
 fig.suptitle("True vs Predicted")
 plt.show()
 output = net(T1_T2[5].to(device).type(torch.cuda.FloatTensor).unsqueeze(dim=0)).squeeze().cpu().detach().numpy()
 target = MWF[5][0].numpy()
-io.imsave("MWF_Prediction.tiff", output)
-io.imsave("MWF_true.tiff", target.astype(np.float32))
+io.imsave("Results/MWF_Prediction.tiff", output)
+io.imsave("Results/MWF_true.tiff", target.astype(np.float32))
 
 # -------------------------------
 
@@ -191,4 +191,4 @@ ax.imshow(SSIM)
 ax.text(0.8, 0.2, "Index SSIM: " + "{:.3f}".format(index), horizontalalignment='center',
                 verticalalignment='center', transform=ax.transAxes)
 plt.show()
-plt.savefig('Similarities.pdf')
+plt.savefig('Results/Similarities.pdf')
