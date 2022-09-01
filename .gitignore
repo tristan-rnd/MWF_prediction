@@ -2,7 +2,6 @@
 
 *.nii
 *.nii.gz
-*.tiff
 *.zip
 
 # Byte-compiled / optimized / DLL files
